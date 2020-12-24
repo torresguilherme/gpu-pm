@@ -9,9 +9,11 @@ sources = [
 ]
 
 assimp = dependency('assimp', version : '>=5.0.0')
+glm = dependency('glm', version : '>=0.9.9')
 
 executable('demo', sources,
 include_directories : incdir,
 dependencies : [
-    assimp
+    assimp,
+    glm
 ])
