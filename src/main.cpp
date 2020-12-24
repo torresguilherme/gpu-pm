@@ -1,3 +1,4 @@
+#include <scene.hpp>
 #include <cstdio>
 
 int main(int argc, char** argv) {
@@ -6,5 +7,5 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    printf("%s\n", argv[1]);
+    Scene scene = Scene(argv[1]);
 }
