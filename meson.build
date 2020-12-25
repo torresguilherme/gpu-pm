@@ -8,6 +8,7 @@ sources = [
     pfx + 'camera.cpp',
     pfx + 'light.cpp',
     pfx + 'texture.cpp',
+    pfx + 'material.cpp',
     pfx + 'scene.cpp'
 ]
 
