@@ -1,10 +1,13 @@
-project('gpu-pm', 'cpp')
+project('gpu-pm', 'cpp', default_options : 'std=c++11')
 
 incdir = 'include/'
 pfx = 'src/'
 sources = [
     pfx + 'main.cpp',
     pfx + 'mesh.cpp',
+    pfx + 'camera.cpp',
+    pfx + 'light.cpp',
+    pfx + 'texture.cpp',
     pfx + 'scene.cpp'
 ]
 

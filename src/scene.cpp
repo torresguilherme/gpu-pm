@@ -38,5 +38,7 @@ Scene::Scene(const char* file_name) {
                 scene->mMeshes[i]->mTextureCoords[j]->y
             ));
         }
+
+        this->meshes.push_back(newmesh);
     }
 }
