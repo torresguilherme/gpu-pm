@@ -9,6 +9,9 @@ typedef struct Mesh {
     std::vector<uint> indices;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> tex_coords;
+    std::vector<glm::vec3> tangents;
+    std::vector<glm::vec3> bitangents;
+    int material;
 
     Mesh();
 } Mesh;

@@ -6,6 +6,7 @@
 #include "texture.hpp"
 #include "material.hpp"
 #include <vector>
+#include <assimp/scene.h>
 
 typedef struct Scene {
     std::vector<Mesh> meshes;
@@ -13,6 +14,12 @@ typedef struct Scene {
     std::vector<Light> lights;
     std::vector<Texture> textures;
     std::vector<Material> materials;
+    uint current_camera;
 
     Scene(const char* file_name);
+    void read_meshes(const aiScene* scene);
+    void read_lights(const aiScene* scene);
+    void read_materials(const aiScene* scene);
+    void read_textures(const aiScene* scene);
+    void read_cameras(const aiScene* scene);
 } Scene;
