@@ -108,13 +108,39 @@ void Scene::read_materials(const aiScene* scene) {
         aiString texture_albedo, texture_mr, texture_normal;
         scene->mMaterials[i]->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &texture_albedo);
         scene->mMaterials[i]->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &texture_mr);
-        new_material.albedo_texture = texture_albedo.data;
-        new_material.metallic_texture = texture_mr.data;
+        new_material.albedo_texture.data = texture_albedo.data;
+        new_material.metallic_texture.data = texture_mr.data;
+        new_material.albedo_texture.height = scene->mTextures[atoi(texture_albedo.C_Str())]->mHeight;
+        new_material.metallic_texture.height = scene->mTextures[atoi(texture_mr.C_Str())]->mHeight;
+        new_material.albedo_texture.width = scene->mTextures[atoi(texture_albedo.C_Str())]->mWidth;
+        new_material.metallic_texture.width = scene->mTextures[atoi(texture_mr.C_Str())]->mWidth;
 
         this->materials.push_back(new_material);
     }
 }
 
 void Scene::read_cameras(const aiScene* scene) {
+    for(uint i = 0; i < scene->mNumCameras; i++) {
+        Camera new_camera;
+        new_camera.aspect = scene->mCameras[i]->mAspect;
+        new_camera.horizontal_fov = scene->mCameras[i]->mHorizontalFOV;
+        new_camera.eye = glm::vec3(
+            scene->mCameras[i]->mPosition.x,
+            scene->mCameras[i]->mPosition.y,
+            scene->mCameras[i]->mPosition.z
+        );
+        new_camera.target = glm::vec3(
+            scene->mCameras[i]->mLookAt.x,
+            scene->mCameras[i]->mLookAt.y,
+            scene->mCameras[i]->mLookAt.z
+        );
+        new_camera.eye = glm::vec3(
+            scene->mCameras[i]->mUp.x,
+            scene->mCameras[i]->mUp.y,
+            scene->mCameras[i]->mUp.z
+        );
 
+        this->cameras.push_back(new_camera);
+        this->current_camera = 0;
+    }
 }

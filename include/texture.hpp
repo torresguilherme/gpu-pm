@@ -4,9 +4,9 @@
 #include <cstdint>
 
 typedef struct Texture {
-    std::vector<std::vector<uint8_t>> data;
-    size_t width;
+    char* data;
     size_t height;
+    size_t width;
 
     Texture();
 } Texture;
