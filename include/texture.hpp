@@ -5,8 +5,8 @@
 
 typedef struct Texture {
     char* data;
-    size_t height;
-    size_t width;
+    int height;
+    int width;
 
     Texture();
 } Texture;

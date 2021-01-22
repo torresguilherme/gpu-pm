@@ -3,6 +3,9 @@
 #include <assimp/postprocess.h>
 #include <assimp/pbrmaterial.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 Scene::Scene(const char* file_name) {
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(
@@ -41,8 +44,8 @@ void Scene::read_meshes(const aiScene* scene) {
             });
 
             newmesh.tex_coords.push_back(glm::vec2(
-                scene->mMeshes[i]->mTextureCoords[j]->x,
-                scene->mMeshes[i]->mTextureCoords[j]->y
+                scene->mMeshes[i]->mTextureCoords[0][j].x,
+                scene->mMeshes[i]->mTextureCoords[0][j].y
             ));
 
             newmesh.tangents.push_back(glm::vec3(
@@ -106,14 +109,12 @@ void Scene::read_materials(const aiScene* scene) {
         aiGetMaterialFloat(scene->mMaterials[i], AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, &new_material.roughness);
 
         aiString texture_albedo, texture_mr, texture_normal;
-        scene->mMaterials[i]->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &texture_albedo);
-        scene->mMaterials[i]->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &texture_mr);
-        new_material.albedo_texture.data = texture_albedo.data;
-        new_material.metallic_texture.data = texture_mr.data;
-        new_material.albedo_texture.height = scene->mTextures[atoi(texture_albedo.C_Str())]->mHeight;
-        new_material.metallic_texture.height = scene->mTextures[atoi(texture_mr.C_Str())]->mHeight;
-        new_material.albedo_texture.width = scene->mTextures[atoi(texture_albedo.C_Str())]->mWidth;
-        new_material.metallic_texture.width = scene->mTextures[atoi(texture_mr.C_Str())]->mWidth;
+        scene->mMaterials[i]->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), texture_albedo);
+        scene->mMaterials[i]->Get(AI_MATKEY_TEXTURE(aiTextureType_METALNESS, 0), texture_mr);
+        stbi_uc *albedo_data = stbi_load(texture_albedo.C_Str(), &new_material.albedo_texture.width, &new_material.albedo_texture.height, nullptr, 3);
+        stbi_uc *metallic_data = stbi_load(texture_mr.C_Str(), &new_material.metallic_texture.width, &new_material.metallic_texture.height, nullptr, 3);
+        new_material.albedo_texture.data = (char*)albedo_data;
+        new_material.metallic_texture.data = (char*)metallic_data;
 
         this->materials.push_back(new_material);
     }
