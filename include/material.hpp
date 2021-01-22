@@ -5,11 +5,8 @@ typedef struct Material {
     glm::vec4 albedo;
     float roughness;
     float metallic;
-    float occlusion_strength;
-    int albedo_texture;
-    int metallic_texture;
-    int normal_map;
-    int occlusion_texture;
+    char* albedo_texture;
+    char* metallic_texture;
 
     Material();
 } Material;

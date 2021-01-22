@@ -1,6 +1,7 @@
 #include <scene.hpp>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
+#include <assimp/pbrmaterial.h>
 
 Scene::Scene(const char* file_name) {
     Assimp::Importer importer;
@@ -20,7 +21,6 @@ Scene::Scene(const char* file_name) {
     this->read_meshes(scene);
     this->read_lights(scene);
     this->read_materials(scene);
-    this->read_textures(scene);
     this->read_cameras(scene);
 }
 
@@ -64,6 +64,8 @@ void Scene::read_meshes(const aiScene* scene) {
             }
         }
 
+        newmesh.material = scene->mMeshes[i]->mMaterialIndex;
+
         this->meshes.push_back(newmesh);
     }
 }
@@ -92,11 +94,25 @@ void Scene::read_lights(const aiScene* scene) {
 }
 
 void Scene::read_materials(const aiScene* scene) {
+    for(uint i = 0; i < scene->mNumMaterials; i++) {
+        Material new_material;
 
-}
+        aiColor4D color;
+        aiGetMaterialColor(scene->mMaterials[i], AI_MATKEY_COLOR_DIFFUSE, &color);
+        new_material.albedo = glm::vec4(
+            color.r, color.g, color.b, color.a
+        );
+        aiGetMaterialFloat(scene->mMaterials[i], AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, &new_material.metallic);
+        aiGetMaterialFloat(scene->mMaterials[i], AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, &new_material.roughness);
 
-void Scene::read_textures(const aiScene* scene) {
+        aiString texture_albedo, texture_mr, texture_normal;
+        scene->mMaterials[i]->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &texture_albedo);
+        scene->mMaterials[i]->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &texture_mr);
+        new_material.albedo_texture = texture_albedo.data;
+        new_material.metallic_texture = texture_mr.data;
 
+        this->materials.push_back(new_material);
+    }
 }
 
 void Scene::read_cameras(const aiScene* scene) {
