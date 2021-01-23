@@ -3,15 +3,30 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <cstring>
+#include <fstream>
 
 const std::vector<const char*> VALIDATION_LAYERS = {
     "VK_LAYER_KHRONOS_validation"
 };
 
+static std::vector<char> read_file(const std::string& filename) {
+    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file!\n");
+    }
+    size_t file_size = file.tellg();
+    std::vector<char> contents(file_size);
+    file.seekg(0);
+    file.read(contents.data(), file_size);
+    file.close();
+    return contents;
+}
+
 GPUInstance::GPUInstance() {
     create_instance();
     pick_physical_device();
     create_logical_device();
+    create_pipeline();
 }
 
 void GPUInstance::create_instance() {
@@ -147,8 +162,34 @@ void GPUInstance::create_logical_device() {
     }
 }
 
-void GPUInstance::create_compute_pipeline() {
-    
+VkShaderModule GPUInstance::create_shader_module(const std::vector<char>& code) {
+    VkShaderModuleCreateInfo create_info {};
+    create_info.codeSize = code.size();
+    create_info.pCode = reinterpret_cast<const uint32_t*>(code.data());
+    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+
+    VkShaderModule module;
+    if (vkCreateShaderModule(this->logical_device, &create_info, nullptr, &module) != VK_SUCCESS) {
+        throw std::runtime_error("Cannot create shader module!\n");
+    }
+}
+
+void GPUInstance::create_pipeline_stages() {
+    VkPipelineShaderStageCreateInfo create_info {};
+    create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    create_info.module = this->compute_module;
+    create_info.pName = "main";
+
+    VkComputePipelineCreateInfo pipeline_create_info {};
+    pipeline_create_info.stage = create_info;
+    pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+}
+
+void GPUInstance::create_pipeline() {
+    auto main_compute_code = read_file("main.spv");
+    this->compute_module = create_shader_module(main_compute_code);
+    create_pipeline_stages();
 }
 
 GPUInstance::~GPUInstance() {
@@ -157,6 +198,7 @@ GPUInstance::~GPUInstance() {
 
 void GPUInstance::cleanup() {
     printf("Destroying GPU instance...\n");
+    vkDestroyShaderModule(this->logical_device, this->compute_module, nullptr);
     vkDestroyDevice(this->logical_device, nullptr);
     vkDestroyInstance(this->vk_instance, nullptr);
 }
