@@ -1,5 +1,5 @@
 # gpu-pm
-[WIP] photon mapper for GPU using vulkan or opencl, i haven't decided yet
+[WIP] photon mapper for GPU using vulkan
 
 this is very incomplete, i do not have a deadline to finish this and i advise against trying to use this software for now.
 
@@ -7,9 +7,7 @@ since this is free software you can build upon this, but let's be honest you pro
 
 # todo list
 
-- import gltf scenes (lights, textures, camera and materials)
-
-- integrate with opencl or vulkan
+- create vulkan pipeline
 
 - attempt to render something
 
@@ -18,6 +16,8 @@ since this is free software you can build upon this, but let's be honest you pro
 - assimp (>= 5.0.0)
 
 - glm (>= 0.9.9)
+
+- vulkan compatible device (>= 1.1)
 
 - meson (use a reasonably recent version idfk)
 
