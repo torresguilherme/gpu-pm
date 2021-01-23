@@ -16,6 +16,8 @@ typedef struct GPUInstance {
     QueueFamilyIndices find_queue_families(VkPhysicalDevice device);
     void pick_physical_device();
     void create_logical_device();
+    void create_compute_pipeline();
+    
     void cleanup();
 
     GPUInstance();

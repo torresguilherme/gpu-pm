@@ -147,6 +147,10 @@ void GPUInstance::create_logical_device() {
     }
 }
 
+void GPUInstance::create_compute_pipeline() {
+    
+}
+
 GPUInstance::~GPUInstance() {
     cleanup();
 }
