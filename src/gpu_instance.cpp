@@ -172,6 +172,8 @@ VkShaderModule GPUInstance::create_shader_module(const std::vector<char>& code) 
     if (vkCreateShaderModule(this->logical_device, &create_info, nullptr, &module) != VK_SUCCESS) {
         throw std::runtime_error("Cannot create shader module!\n");
     }
+
+    return module;
 }
 
 void GPUInstance::create_pipeline_stages() {
@@ -181,9 +183,25 @@ void GPUInstance::create_pipeline_stages() {
     create_info.module = this->compute_module;
     create_info.pName = "main";
 
+    std::vector<VkDescriptorSetLayout> set_layouts;
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+    VkDescriptorSetLayoutCreateInfo set_layout_create_info {};
+    set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    set_layout_create_info.bindingCount = bindings.size();
+    set_layout_create_info.pBindings = bindings.data();
+
+    VkPipelineLayoutCreateInfo layout_create_info;
+    layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layout_create_info.setLayoutCount = set_layouts.size();
+    layout_create_info.pSetLayouts = set_layouts.data();
+    if (vkCreatePipelineLayout(this->logical_device, &layout_create_info, nullptr, &this->layout) != VK_SUCCESS) {
+        throw std::runtime_error("Could not create pipeline layout, aborting!\n");
+    }
+
     VkComputePipelineCreateInfo pipeline_create_info {};
     pipeline_create_info.stage = create_info;
     pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipeline_create_info.layout = layout;
 }
 
 void GPUInstance::create_pipeline() {
@@ -198,7 +216,9 @@ GPUInstance::~GPUInstance() {
 
 void GPUInstance::cleanup() {
     printf("Destroying GPU instance...\n");
+    vkDestroyPipelineLayout(this->logical_device, this->layout, nullptr);
     vkDestroyShaderModule(this->logical_device, this->compute_module, nullptr);
+    vkDestroyPipeline(this->logical_device, this->pipeline, nullptr);
     vkDestroyDevice(this->logical_device, nullptr);
     vkDestroyInstance(this->vk_instance, nullptr);
 }
