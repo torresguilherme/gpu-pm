@@ -9,6 +9,7 @@ typedef struct GPUInstance {
     VkPhysicalDevice physical_device;
     VkDevice logical_device;
     VkShaderModule compute_module;
+    VkDescriptorSetLayout descriptor_set_layout;
     VkPipelineLayout layout;
     VkPipeline pipeline;
 

@@ -160,6 +160,8 @@ void GPUInstance::create_logical_device() {
     if (vkCreateDevice(physical_device, &device_create_info, nullptr, &this->logical_device) != VK_SUCCESS) {
         throw std::runtime_error("Failed at creating logical device!\n");
     }
+
+    printf("Device created with success!\n");
 }
 
 VkShaderModule GPUInstance::create_shader_module(const std::vector<char>& code) {
@@ -173,41 +175,58 @@ VkShaderModule GPUInstance::create_shader_module(const std::vector<char>& code) 
         throw std::runtime_error("Cannot create shader module!\n");
     }
 
+    printf("Created a shader module successfully!\n");
     return module;
 }
 
 void GPUInstance::create_pipeline_stages() {
-    VkPipelineShaderStageCreateInfo create_info {};
-    create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    create_info.module = this->compute_module;
-    create_info.pName = "main";
+    VkPipelineShaderStageCreateInfo stage_create_info {};
+    stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    stage_create_info.module = this->compute_module;
+    stage_create_info.pName = "main";
 
-    std::vector<VkDescriptorSetLayout> set_layouts;
-    std::vector<VkDescriptorSetLayoutBinding> bindings;
+    std::vector<VkDescriptorSetLayoutBinding> bindings(1);
+    bindings[0].binding = 0;
+    bindings[0].descriptorCount = 1;
+    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
     VkDescriptorSetLayoutCreateInfo set_layout_create_info {};
     set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     set_layout_create_info.bindingCount = bindings.size();
     set_layout_create_info.pBindings = bindings.data();
+    if (vkCreateDescriptorSetLayout(this->logical_device, &set_layout_create_info, nullptr, &this->descriptor_set_layout) != VK_SUCCESS) {
+        throw std::runtime_error("Could not create pipeline set layouts!\n");
+    }
 
-    VkPipelineLayoutCreateInfo layout_create_info;
+    VkPipelineLayoutCreateInfo layout_create_info {};
     layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layout_create_info.setLayoutCount = set_layouts.size();
-    layout_create_info.pSetLayouts = set_layouts.data();
+    layout_create_info.setLayoutCount = 1;
+    layout_create_info.pSetLayouts = &this->descriptor_set_layout;
     if (vkCreatePipelineLayout(this->logical_device, &layout_create_info, nullptr, &this->layout) != VK_SUCCESS) {
         throw std::runtime_error("Could not create pipeline layout, aborting!\n");
     }
 
     VkComputePipelineCreateInfo pipeline_create_info {};
-    pipeline_create_info.stage = create_info;
+    pipeline_create_info.stage = stage_create_info;
     pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    pipeline_create_info.layout = layout;
+    pipeline_create_info.layout = this->layout;
+    if (vkCreateComputePipelines(this->logical_device,
+    VK_NULL_HANDLE,
+    1,
+    &pipeline_create_info,
+    nullptr, 
+    &this->pipeline) != VK_SUCCESS) {
+        throw std::runtime_error("Could not create compute pipeline, aborting!\n");
+    }
 }
 
 void GPUInstance::create_pipeline() {
     auto main_compute_code = read_file("main.spv");
     this->compute_module = create_shader_module(main_compute_code);
     create_pipeline_stages();
+    printf("Compute pipeline successfully created!\n");
 }
 
 GPUInstance::~GPUInstance() {
@@ -216,6 +235,7 @@ GPUInstance::~GPUInstance() {
 
 void GPUInstance::cleanup() {
     printf("Destroying GPU instance...\n");
+    vkDestroyDescriptorSetLayout(this->logical_device, this->descriptor_set_layout, nullptr);
     vkDestroyPipelineLayout(this->logical_device, this->layout, nullptr);
     vkDestroyShaderModule(this->logical_device, this->compute_module, nullptr);
     vkDestroyPipeline(this->logical_device, this->pipeline, nullptr);
