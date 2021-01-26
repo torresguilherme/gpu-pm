@@ -180,6 +180,14 @@ VkShaderModule GPUInstance::create_shader_module(const std::vector<char>& code) 
     return module;
 }
 
+void GPUInstance::create_ubo_binding(std::vector<VkDescriptorSetLayoutBinding>& bindings, uint index) {
+    bindings[index].binding = index;
+    bindings[index].descriptorCount = 1;
+    bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[index].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[index].pImmutableSamplers = nullptr;
+}
+
 void GPUInstance::create_pipeline_stages() {
     VkPipelineShaderStageCreateInfo stage_create_info {};
     stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -187,24 +195,10 @@ void GPUInstance::create_pipeline_stages() {
     stage_create_info.module = this->compute_module;
     stage_create_info.pName = "main";
 
-    std::vector<VkDescriptorSetLayoutBinding> bindings(2);
-    bindings[0].binding = 0;
-    bindings[0].descriptorCount = 1;
-    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    bindings[0].pImmutableSamplers = nullptr;
-
-    bindings[1].binding = 1;
-    bindings[1].descriptorCount = 1;
-    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    bindings[1].pImmutableSamplers = nullptr;
-
-    bindings[2].binding = 2;
-    bindings[2].descriptorCount = 1;
-    bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    bindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    bindings[2].pImmutableSamplers = nullptr;
+    std::vector<VkDescriptorSetLayoutBinding> bindings(3);
+    for (uint i = 0; i < 3; i++) {
+        create_ubo_binding(bindings, i);
+    }
 
     VkDescriptorSetLayoutCreateInfo set_layout_create_info {};
     set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

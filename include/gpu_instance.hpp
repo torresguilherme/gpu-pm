@@ -22,6 +22,7 @@ typedef struct GPUInstance {
     void create_logical_device();
 
     VkShaderModule create_shader_module(const std::vector<char>& code);
+    void create_ubo_binding(std::vector<VkDescriptorSetLayoutBinding>& bindings, uint index);
     void create_pipeline_stages();
     void create_pipeline();
     
