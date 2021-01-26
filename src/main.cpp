@@ -1,7 +1,6 @@
 #include <scene.hpp>
 #include <renderer.hpp>
 #include <cstdio>
-#include <assimp/scene.h>
 
 int main(int argc, char** argv) {
     if(argc == 1) {
@@ -13,4 +12,6 @@ int main(int argc, char** argv) {
     Scene scene = Scene(argv[1]);
     printf("Initializing renderer...\n");
     Renderer renderer = Renderer();
+    renderer.render(scene);
+    return 0;
 }

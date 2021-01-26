@@ -1,0 +1,33 @@
+layout (set = 0, binding = 0) buffer MeshData {
+    vec3 position[];
+    vec3 normal[];
+    vec2 tex_coord[];
+    vec3 tangent[];
+    vec3 bitangent[];
+} mesh_data;
+
+layout (set = 0, binding = 1) buffer Image {
+    vec4 data[];
+} image;
+
+layout (set = 0, binding = 2) buffer Specs {
+    uint samples_per_pixel;
+    uint image_width;
+    uint image_height;
+} specs;
+
+layout (set = 0, binding = 3) buffer Camera {
+    mat4 view_matrix;
+    float horizontal_fov;
+    float aspect;
+} camera;
+
+layout (set = 0, binding = 4) buffer Lights {
+    vec3 position;
+    vec3 color_diffuse;
+    vec3 color_specular;
+    vec3 color_ambient;
+    float attenuation_constant;
+    float attenuation_linear;
+    float attenuation_quadratic;
+} lights;

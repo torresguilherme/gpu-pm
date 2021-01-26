@@ -26,6 +26,8 @@ typedef struct GPUInstance {
     void create_pipeline_stages();
     void create_pipeline();
     
+    void shader_pass();
+
     void cleanup();
 
     GPUInstance();

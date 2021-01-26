@@ -1,26 +1,9 @@
 #version 450
 #include "ray.comp"
+#include "buffers.comp"
 
 const uint BATCH = 64;
 layout (local_size_x = BATCH, local_size_y = 1, local_size_z = 1) in;
-
-layout (set = 0, binding = 0) buffer MeshData {
-    vec3 position[];
-    vec3 normal[];
-    vec2 tex_coord[];
-    vec3 tangent[];
-    vec3 bitangent[];
-} mesh_data;
-
-layout (set = 0, binding = 1) buffer Image {
-    vec4 data[];
-} image;
-
-layout (set = 0, binding = 2) buffer Specs {
-    uint samples_per_pixel;
-    uint image_width;
-    uint image_height;
-} specs;
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;

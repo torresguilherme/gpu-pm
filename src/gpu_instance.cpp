@@ -6,6 +6,7 @@
 #include <fstream>
 
 const uint BATCH = 64;
+const uint UBO_COUNT = 5;
 const std::vector<const char*> VALIDATION_LAYERS = {
     "VK_LAYER_KHRONOS_validation"
 };
@@ -195,8 +196,8 @@ void GPUInstance::create_pipeline_stages() {
     stage_create_info.module = this->compute_module;
     stage_create_info.pName = "main";
 
-    std::vector<VkDescriptorSetLayoutBinding> bindings(3);
-    for (uint i = 0; i < 3; i++) {
+    std::vector<VkDescriptorSetLayoutBinding> bindings(UBO_COUNT);
+    for (uint i = 0; i < UBO_COUNT; i++) {
         create_ubo_binding(bindings, i);
     }
 
