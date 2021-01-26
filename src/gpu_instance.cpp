@@ -5,6 +5,7 @@
 #include <cstring>
 #include <fstream>
 
+const uint BATCH = 64;
 const std::vector<const char*> VALIDATION_LAYERS = {
     "VK_LAYER_KHRONOS_validation"
 };
@@ -186,11 +187,24 @@ void GPUInstance::create_pipeline_stages() {
     stage_create_info.module = this->compute_module;
     stage_create_info.pName = "main";
 
-    std::vector<VkDescriptorSetLayoutBinding> bindings(1);
+    std::vector<VkDescriptorSetLayoutBinding> bindings(2);
     bindings[0].binding = 0;
     bindings[0].descriptorCount = 1;
     bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[0].pImmutableSamplers = nullptr;
+
+    bindings[1].binding = 1;
+    bindings[1].descriptorCount = 1;
+    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[1].pImmutableSamplers = nullptr;
+
+    bindings[2].binding = 2;
+    bindings[2].descriptorCount = 1;
+    bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[2].pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo set_layout_create_info {};
     set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

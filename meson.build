@@ -31,7 +31,9 @@ foreach shader : shaders
         'shader @0@'.format(shader),
         command : [glslc, '@INPUT@', '-o', '@OUTPUT@'],
         input : shader_pfx + shader,
-        output: '@BASENAME@.spv'
+        output: '@BASENAME@.spv',
+        install : true,
+        install_dir : shader_pfx
     )
 endforeach
 
