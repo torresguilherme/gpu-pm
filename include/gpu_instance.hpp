@@ -12,6 +12,10 @@ typedef struct GPUInstance {
     VkDescriptorSetLayout descriptor_set_layout;
     VkPipelineLayout layout;
     VkPipeline pipeline;
+    VkQueue queue;
+    VkCommandBuffer command_buffer;
+    VkCommandPool command_pool;
+    VkFence fence;
 
     void create_instance();
     bool check_validation();
