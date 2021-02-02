@@ -29,6 +29,10 @@ GPUInstance::GPUInstance() {
     pick_physical_device();
     create_logical_device();
     create_pipeline();
+    build_command_pool();
+    build_descriptor_pool();
+    build_descriptor_set();
+    build_uniform_buffers();
 }
 
 void GPUInstance::create_instance() {
@@ -238,12 +242,71 @@ void GPUInstance::create_pipeline() {
     printf("Compute pipeline successfully created!\n");
 }
 
+void GPUInstance::build_command_pool() {
+    QueueFamilyIndices family_indices = find_queue_families(this->physical_device);
+    VkCommandPoolCreateInfo pool_info {};
+    pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_info.queueFamilyIndex = family_indices.graphics_family;
+    pool_info.flags = 0;
+
+    if (vkCreateCommandPool(this->logical_device, &pool_info, nullptr, &this->command_pool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create command pool!");
+    }
+}
+
+void GPUInstance::build_descriptor_pool() {
+
+}
+
+void GPUInstance::build_descriptor_set() {
+
+}
+
+void GPUInstance::build_uniform_buffers() {
+    this->buffers.resize(1);
+    this->device_memory.resize(1);
+}
+
+void GPUInstance::build_command_buffer() {
+    VkCommandBufferAllocateInfo command_buffer_info {};
+    command_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_info.commandPool = this->command_pool;
+    command_buffer_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    command_buffer_info.commandBufferCount = 1;
+
+    if (vkAllocateCommandBuffers(this->logical_device, &command_buffer_info, &this->command_buffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate command buffers!");
+    }
+
+    VkCommandBufferBeginInfo begin_info {};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = 0;
+    begin_info.pInheritanceInfo = nullptr;
+
+    if (vkBeginCommandBuffer(this->command_buffer, &begin_info) != VK_SUCCESS) {
+        throw std::runtime_error("failed to begin recording command buffer!");
+    }
+
+    vkCmdBindPipeline(this->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, this->pipeline);
+    vkCmdBindDescriptorSets(this->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, this->layout, 0, 1,
+        &this->descriptor_set, 0, nullptr);
+}
+
+void GPUInstance::execute_command_buffer(int width, int height) {
+    vkCmdDispatch(this->command_buffer, width, height, 1);
+}
+
+void GPUInstance::end_command_buffer() {
+    vkEndCommandBuffer(this->command_buffer);
+}
+
 GPUInstance::~GPUInstance() {
     cleanup();
 }
 
 void GPUInstance::cleanup() {
     printf("Destroying GPU instance...\n");
+    vkDestroyCommandPool(this->logical_device, this->command_pool, nullptr);
     vkDestroyDescriptorSetLayout(this->logical_device, this->descriptor_set_layout, nullptr);
     vkDestroyPipelineLayout(this->logical_device, this->layout, nullptr);
     vkDestroyShaderModule(this->logical_device, this->compute_module, nullptr);

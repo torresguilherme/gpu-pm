@@ -4,7 +4,7 @@ struct QueueFamilyIndices {
     int graphics_family;
 };
 
-typedef struct GPUInstance {
+struct GPUInstance {
     VkInstance vk_instance;
     VkPhysicalDevice physical_device;
     VkDevice logical_device;
@@ -12,10 +12,12 @@ typedef struct GPUInstance {
     VkDescriptorSetLayout descriptor_set_layout;
     VkPipelineLayout layout;
     VkPipeline pipeline;
-    VkQueue queue;
     VkCommandBuffer command_buffer;
     VkCommandPool command_pool;
-    VkFence fence;
+    VkDescriptorPool descriptor_pool;
+    VkDescriptorSet descriptor_set;
+    std::vector<VkBuffer> buffers;
+    std::vector<VkDeviceMemory> device_memory;
 
     void create_instance();
     bool check_validation();
@@ -29,11 +31,17 @@ typedef struct GPUInstance {
     void create_ubo_binding(std::vector<VkDescriptorSetLayoutBinding>& bindings, uint index);
     void create_pipeline_stages();
     void create_pipeline();
-    
-    void shader_pass();
+    void build_command_pool();
+    void build_descriptor_pool();
+    void build_descriptor_set();
+    void build_uniform_buffers();
+
+    void build_command_buffer();
+    void execute_command_buffer(int width, int height);
+    void end_command_buffer();
 
     void cleanup();
 
     GPUInstance();
     ~GPUInstance();
-} GPUInstance;
+};
