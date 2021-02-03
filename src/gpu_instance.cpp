@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <fstream>
+#include <glm/gtc/matrix_transform.hpp>
 
 const uint BATCH = 64;
 const uint UBO_COUNT = 5;
@@ -298,11 +299,118 @@ void GPUInstance::build_uniform_buffers() {
 }
 
 void GPUInstance::build_descriptor_pool() {
+    VkDescriptorPoolSize pool_size {};
+    pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    pool_size.descriptorCount = UBO_COUNT;
 
+    VkDescriptorPoolCreateInfo pool_info {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.poolSizeCount = 1;
+    pool_info.pPoolSizes = &pool_size;
+    pool_info.maxSets = 1;
+
+    if (vkCreateDescriptorPool(this->logical_device, &pool_info, nullptr, &this->descriptor_pool) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create descriptor pool!\n");
+    }
+}
+
+uint GPUInstance::get_buffer_size(uint index) {
+    if (index == 0) return sizeof(uniform_buffers::MeshData) * this->meshes_data.size();
+    if (index == 1) return sizeof(uniform_buffers::Image);
+    if (index == 2) return sizeof(uniform_buffers::Specs);
+    if (index == 3) return sizeof(uniform_buffers::Camera);
+    else return sizeof(uniform_buffers::Light) * this->lights.size();
 }
 
 void GPUInstance::build_descriptor_set() {
+    VkDescriptorSetAllocateInfo alloc_info {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorPool = this->descriptor_pool;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.pSetLayouts = &this->descriptor_set_layout;
 
+    this->descriptor_sets.resize(1);
+    if (vkAllocateDescriptorSets(this->logical_device, &alloc_info, this->descriptor_sets.data()) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to allocate descriptor sets!\n");
+    }
+}
+
+void GPUInstance::allocate_uniform_data(const Scene& scene, uint width, uint height, uint samples_per_pixel) {
+    this->meshes_data.resize(scene.meshes.size());
+    for (uint i = 0; i < scene.meshes.size(); i++) {
+        this->meshes_data[i].position = scene.meshes[i].vertices.data();
+        this->meshes_data[i].normal = scene.meshes[i].normals.data();
+        this->meshes_data[i].tex_coord = scene.meshes[i].tex_coords.data();
+        this->meshes_data[i].tangent = scene.meshes[i].tangents.data();
+        this->meshes_data[i].bitangent = scene.meshes[i].bitangents.data();
+        this->meshes_data[i].indices = scene.meshes[i].indices.data();
+        this->meshes_data[i].num_indices = scene.meshes[i].indices.size();
+        this->meshes_data[i].num_vertices = scene.meshes[i].vertices.size();
+        this->meshes_data[i].global_transform = scene.meshes[i].global_transform;
+    }
+
+    this->lights.resize(scene.lights.size());
+    for (uint i = 0; i < scene.lights.size(); i++) {
+        this->lights[i].position = scene.lights[i].position;
+        this->lights[i].color_ambient = scene.lights[i].color_ambient;
+        this->lights[i].color_diffuse = scene.lights[i].color_diffuse;
+        this->lights[i].color_specular = scene.lights[i].color_specular;
+        this->lights[i].attenuation_constant = scene.lights[i].attenuation_constant;
+        this->lights[i].attenuation_linear = scene.lights[i].attenuation_linear;
+        this->lights[i].attenuation_quadratic = scene.lights[i].attenuation_quadratic;
+    }
+
+    this->specs.num_lights = scene.lights.size();
+    this->specs.num_meshes = scene.meshes.size();
+    this->specs.image_width = width;
+    this->specs.image_height = height;
+    this->specs.samples_per_pixel = samples_per_pixel;
+
+    // uncomment later when using the gltf camera
+    // this->camera.aspect = scene.cameras[scene.current_camera].aspect;
+    // this->camera.horizontal_fov = scene.cameras[scene.current_camera].horizontal_fov;
+    // glm::vec3 up = scene.cameras[scene.current_camera].up;
+    // glm::vec3 eye = scene.cameras[scene.current_camera].eye;
+    // glm::vec3 target = scene.cameras[scene.current_camera].target;
+    // this->camera.view_matrix = glm::lookAt(eye, target, up);
+
+    this->image.data = (glm::vec4*)calloc(width * height, sizeof(glm::vec4));
+}
+
+void GPUInstance::send_uniform_data_struct(uint index, int struct_size, int buffer_length, void* data) {
+    void* data_pointer;
+    vkMapMemory(this->logical_device, this->device_memory[index], 0,
+        struct_size * buffer_length, 0, &data_pointer);
+    memcpy(data_pointer, data, struct_size * buffer_length);
+    vkUnmapMemory(this->logical_device, this->device_memory[index]);
+}
+
+void GPUInstance::send_uniform_data() {
+    send_uniform_data_struct(0, sizeof(uniform_buffers::MeshData), meshes_data.size(), meshes_data.data());
+    send_uniform_data_struct(1, sizeof(uniform_buffers::Image), 1, &image);
+    send_uniform_data_struct(2, sizeof(uniform_buffers::Specs), 1, &specs);
+    send_uniform_data_struct(3, sizeof(uniform_buffers::Camera), 1, &camera);
+    send_uniform_data_struct(4, sizeof(uniform_buffers::Light), lights.size(), lights.data());
+
+    std::vector<VkDescriptorBufferInfo> buffer_infos;
+    std::vector<VkWriteDescriptorSet> descriptor_writes;
+    for (uint i = 0; i < UBO_COUNT; i++) {
+        buffer_infos.push_back({});
+        buffer_infos[i].buffer = buffers[i];
+        buffer_infos[i].offset = 0;
+        buffer_infos[i].range = get_buffer_size(i);
+
+        descriptor_writes.push_back({});
+        descriptor_writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_writes[i].dstSet = this->descriptor_sets[0];
+        descriptor_writes[i].dstBinding = i;
+        descriptor_writes[i].dstArrayElement = 0;
+        descriptor_writes[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptor_writes[i].descriptorCount = UBO_COUNT;
+        descriptor_writes[i].pBufferInfo = &buffer_infos[i];
+    }
+
+    vkUpdateDescriptorSets(this->logical_device, UBO_COUNT, descriptor_writes.data(), 0, nullptr);
 }
 
 void GPUInstance::build_command_buffer() {
@@ -326,8 +434,8 @@ void GPUInstance::build_command_buffer() {
     }
 
     vkCmdBindPipeline(this->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, this->pipeline);
-    vkCmdBindDescriptorSets(this->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, this->layout, 0, 1,
-        &this->descriptor_set, 0, nullptr);
+    vkCmdBindDescriptorSets(this->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, this->layout, 0, UBO_COUNT,
+        this->descriptor_sets.data(), 0, nullptr);
 }
 
 void GPUInstance::execute_command_buffer(int width, int height) {
@@ -342,8 +450,14 @@ GPUInstance::~GPUInstance() {
     cleanup();
 }
 
+void GPUInstance::destroy_image_data() {
+    free(&this->image);
+}
+
 void GPUInstance::cleanup() {
     printf("Destroying GPU instance...\n");
+    this->destroy_image_data();
+    vkDestroyDescriptorPool(this->logical_device, this->descriptor_pool, nullptr);
     vkDestroyCommandPool(this->logical_device, this->command_pool, nullptr);
     vkDestroyDescriptorSetLayout(this->logical_device, this->descriptor_set_layout, nullptr);
     vkDestroyPipelineLayout(this->logical_device, this->layout, nullptr);

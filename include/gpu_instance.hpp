@@ -1,11 +1,55 @@
-#include <vulkan/vulkan.hpp>
+#include <scene.hpp>
+#include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
 struct QueueFamilyIndices {
     int graphics_family;
 };
 
+namespace uniform_buffers {
+    struct MeshData {
+        const glm::vec3* position;
+        const glm::vec3* normal;
+        const glm::vec2* tex_coord;
+        const glm::vec3* tangent;
+        const glm::vec3* bitangent;
+        const uint* indices;
+        uint num_vertices;
+        uint num_indices;
+        glm::mat4 global_transform;
+    };
+
+    struct Image {
+        glm::vec4* data;
+    };
+
+    struct Specs {
+        uint samples_per_pixel;
+        uint image_width;
+        uint image_height;
+        uint num_meshes;
+        uint num_lights;
+    };
+
+    struct Camera {
+        glm::mat4 view_matrix;
+        float horizontal_fov;
+        float aspect;
+    };
+
+    struct Light {
+        glm::vec3 position;
+        glm::vec3 color_diffuse;
+        glm::vec3 color_specular;
+        glm::vec3 color_ambient;
+        float attenuation_constant;
+        float attenuation_linear;
+        float attenuation_quadratic;
+    };
+};
+
 struct GPUInstance {
+    // vulkan objects
     VkInstance vk_instance;
     VkPhysicalDevice physical_device;
     VkDevice logical_device;
@@ -16,9 +60,16 @@ struct GPUInstance {
     VkCommandBuffer command_buffer;
     VkCommandPool command_pool;
     VkDescriptorPool descriptor_pool;
-    VkDescriptorSet descriptor_set;
+    std::vector<VkDescriptorSet> descriptor_sets;
     std::vector<VkBuffer> buffers;
     std::vector<VkDeviceMemory> device_memory;
+
+    // buffers
+    std::vector<uniform_buffers::MeshData> meshes_data;
+    uniform_buffers::Image image;
+    uniform_buffers::Specs specs;
+    uniform_buffers::Camera camera;
+    std::vector<uniform_buffers::Light> lights;
 
     void create_instance();
     bool check_validation();
@@ -36,50 +87,19 @@ struct GPUInstance {
     uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties);
     void build_uniform_buffers();
     void build_descriptor_pool();
+    uint get_buffer_size(uint index);
     void build_descriptor_set();
 
+    void allocate_uniform_data(const Scene& scene, uint width, uint height, uint samples_per_pixel);
+    void send_uniform_data_struct(uint index, int struct_size, int buffer_length, void* data);
+    void send_uniform_data();
     void build_command_buffer();
     void execute_command_buffer(int width, int height);
     void end_command_buffer();
 
+    void destroy_image_data();
     void cleanup();
 
     GPUInstance();
     ~GPUInstance();
-};
-
-namespace buffers {
-    struct MeshData {
-        std::vector<glm::vec3> position;
-        std::vector<glm::vec3> normal;
-        std::vector<glm::vec3> tex_coord;
-        std::vector<glm::vec3> tangent;
-        std::vector<glm::vec3> bitangent;
-    };
-
-    struct Image {
-        std::vector<glm::vec4> data;
-    };
-
-    struct Specs {
-        uint samples_per_pixel;
-        uint image_width;
-        uint image_height;
-    };
-
-    struct Camera {
-        glm::mat4 view_matrix;
-        float horizontal_fov;
-        float aspect;
-    };
-
-    struct Lights {
-        std::vector<glm::vec3> position;
-        std::vector<glm::vec3> color_diffuse;
-        std::vector<glm::vec3> color_specular;
-        std::vector<glm::vec3> color_ambient;
-        std::vector<float> attenuation_constant;
-        std::vector<float> attenuation_linear;
-        std::vector<float> attenuation_quadratic;
-    };
 };

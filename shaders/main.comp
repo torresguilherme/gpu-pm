@@ -1,6 +1,6 @@
 #version 450
-#include "ray.comp"
 #include "buffers.comp"
+#include "ray.comp"
 
 const uint BATCH = 64;
 layout (local_size_x = BATCH, local_size_y = 1, local_size_z = 1) in;

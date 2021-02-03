@@ -8,10 +8,11 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    printf("Initializing scene...\n");
-    Scene scene = Scene(argv[1]);
     printf("Initializing renderer...\n");
     Renderer renderer = Renderer();
+    printf("Initializing scene...\n");
+    Scene scene = Scene(argv[1]);
+    printf("Rendering...");
     renderer.render(scene);
     return 0;
 }
