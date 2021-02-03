@@ -30,9 +30,9 @@ GPUInstance::GPUInstance() {
     create_logical_device();
     create_pipeline();
     build_command_pool();
+    build_uniform_buffers();
     build_descriptor_pool();
     build_descriptor_set();
-    build_uniform_buffers();
 }
 
 void GPUInstance::create_instance() {
@@ -250,7 +250,50 @@ void GPUInstance::build_command_pool() {
     pool_info.flags = 0;
 
     if (vkCreateCommandPool(this->logical_device, &pool_info, nullptr, &this->command_pool) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create command pool!");
+        throw std::runtime_error("failed to create command pool!\n");
+    }
+}
+
+uint32_t GPUInstance::find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties) {
+    VkPhysicalDeviceMemoryProperties mem_properties;
+    vkGetPhysicalDeviceMemoryProperties(this->physical_device, &mem_properties);
+
+    for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
+        if (type_filter & (1 << i) && (mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
+            return i;
+        }
+    }
+
+    throw std::runtime_error("failed to find suitable memory type!");
+}
+
+void GPUInstance::build_uniform_buffers() {
+    this->buffers.resize(UBO_COUNT);
+    this->device_memory.resize(UBO_COUNT);
+
+    for (uint i = 0; i < UBO_COUNT; i++) {
+        VkBufferCreateInfo buffer_info {};
+        buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_info.size = 1;
+        buffer_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateBuffer(this->logical_device, &buffer_info, nullptr, &this->buffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("Couldn't create a uniform buffer!\n");
+        }
+
+        VkMemoryRequirements memory_requirements;
+        vkGetBufferMemoryRequirements(this->logical_device, this->buffers[i], &memory_requirements);
+
+        VkMemoryAllocateInfo alloc_info {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        alloc_info.allocationSize = memory_requirements.size;
+        alloc_info.memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        if (vkAllocateMemory(this->logical_device, &alloc_info, nullptr, &this->device_memory[i]) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to allocate vertex buffer memory!\n");
+        }
     }
 }
 
@@ -262,11 +305,6 @@ void GPUInstance::build_descriptor_set() {
 
 }
 
-void GPUInstance::build_uniform_buffers() {
-    this->buffers.resize(1);
-    this->device_memory.resize(1);
-}
-
 void GPUInstance::build_command_buffer() {
     VkCommandBufferAllocateInfo command_buffer_info {};
     command_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -275,7 +313,7 @@ void GPUInstance::build_command_buffer() {
     command_buffer_info.commandBufferCount = 1;
 
     if (vkAllocateCommandBuffers(this->logical_device, &command_buffer_info, &this->command_buffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate command buffers!");
+        throw std::runtime_error("failed to allocate command buffers!\n");
     }
 
     VkCommandBufferBeginInfo begin_info {};
@@ -284,7 +322,7 @@ void GPUInstance::build_command_buffer() {
     begin_info.pInheritanceInfo = nullptr;
 
     if (vkBeginCommandBuffer(this->command_buffer, &begin_info) != VK_SUCCESS) {
-        throw std::runtime_error("failed to begin recording command buffer!");
+        throw std::runtime_error("failed to begin recording command buffer!\n");
     }
 
     vkCmdBindPipeline(this->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, this->pipeline);
