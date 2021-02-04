@@ -392,22 +392,23 @@ void GPUInstance::send_uniform_data() {
     send_uniform_data_struct(3, sizeof(uniform_buffers::Camera), 1, &camera);
     send_uniform_data_struct(4, sizeof(uniform_buffers::Light), lights.size(), lights.data());
 
-    std::vector<VkDescriptorBufferInfo> buffer_infos;
-    std::vector<VkWriteDescriptorSet> descriptor_writes;
+    std::vector<VkDescriptorBufferInfo> buffer_infos(UBO_COUNT);
+    std::vector<VkWriteDescriptorSet> descriptor_writes(UBO_COUNT);
     for (uint i = 0; i < UBO_COUNT; i++) {
-        buffer_infos.push_back({});
         buffer_infos[i].buffer = buffers[i];
         buffer_infos[i].offset = 0;
         buffer_infos[i].range = get_buffer_size(i);
 
-        descriptor_writes.push_back({});
         descriptor_writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptor_writes[i].dstSet = this->descriptor_sets[0];
         descriptor_writes[i].dstBinding = i;
         descriptor_writes[i].dstArrayElement = 0;
         descriptor_writes[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptor_writes[i].descriptorCount = UBO_COUNT;
+        descriptor_writes[i].descriptorCount = 1;
         descriptor_writes[i].pBufferInfo = &buffer_infos[i];
+        descriptor_writes[i].pNext = nullptr;
+        descriptor_writes[i].pImageInfo = nullptr;
+        descriptor_writes[i].pTexelBufferView = nullptr;
     }
 
     vkUpdateDescriptorSets(this->logical_device, UBO_COUNT, descriptor_writes.data(), 0, nullptr);
