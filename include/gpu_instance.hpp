@@ -7,6 +7,27 @@ struct QueueFamilyIndices {
 };
 
 namespace uniform_buffers {
+    struct Specs {
+        uint samples_per_pixel;
+        uint image_width;
+        uint image_height;
+        uint num_meshes;
+        uint num_materials;
+    };
+
+    struct Camera {
+        glm::mat4 view_matrix;
+        float horizontal_fov;
+        float aspect;
+    };
+
+    struct MaterialData {
+        glm::vec4 albedo;
+        float metallic;
+        float roughness;
+        glm::vec4 emissive;
+    };
+
     struct MeshData {
         const glm::vec3* position;
         const glm::vec3* normal;
@@ -14,27 +35,14 @@ namespace uniform_buffers {
         const glm::vec3* tangent;
         const glm::vec3* bitangent;
         const uint* indices;
-        uint num_vertices;
+        uint material_index;
         uint num_indices;
+        uint num_vertices;
         glm::mat4 global_transform;
     };
 
     struct Image {
         glm::vec4* data;
-    };
-
-    struct Specs {
-        uint samples_per_pixel;
-        uint image_width;
-        uint image_height;
-        uint num_meshes;
-        uint num_lights;
-    };
-
-    struct Camera {
-        glm::mat4 view_matrix;
-        float horizontal_fov;
-        float aspect;
     };
 };
 
@@ -56,6 +64,7 @@ struct GPUInstance {
 
     // buffers
     std::vector<uniform_buffers::MeshData> meshes_data;
+    std::vector<uniform_buffers::MaterialData> material_data;
     uniform_buffers::Image image;
     uniform_buffers::Specs specs;
     uniform_buffers::Camera camera;

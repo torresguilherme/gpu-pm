@@ -7,7 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 const uint BATCH = 64;
-const uint UBO_COUNT = 4;
+const uint UBO_COUNT = 5;
 const std::vector<const char*> VALIDATION_LAYERS = {
     "VK_LAYER_KHRONOS_validation"
 };
@@ -315,10 +315,11 @@ void GPUInstance::build_descriptor_pool() {
 }
 
 uint GPUInstance::get_buffer_size(uint index) {
-    if (index == 0) return sizeof(uniform_buffers::MeshData) * this->meshes_data.size();
-    if (index == 1) return sizeof(uniform_buffers::Image);
-    if (index == 2) return sizeof(uniform_buffers::Specs);
-    else return sizeof(uniform_buffers::Camera);
+    if (index == 0) return sizeof(uniform_buffers::Specs);
+    if (index == 1) return sizeof(uniform_buffers::Camera);
+    if (index == 2) return sizeof(uniform_buffers::MaterialData) * this->material_data.size();
+    if (index == 3) return sizeof(uniform_buffers::MeshData) * this->meshes_data.size();
+    else return sizeof(uniform_buffers::Image);
 }
 
 void GPUInstance::build_descriptor_set() {
@@ -343,12 +344,21 @@ void GPUInstance::allocate_uniform_data(const Scene& scene, uint width, uint hei
         this->meshes_data[i].tangent = scene.meshes[i].tangents.data();
         this->meshes_data[i].bitangent = scene.meshes[i].bitangents.data();
         this->meshes_data[i].indices = scene.meshes[i].indices.data();
+        this->meshes_data[i].material_index = scene.meshes[i].material;
         this->meshes_data[i].num_indices = scene.meshes[i].indices.size();
         this->meshes_data[i].num_vertices = scene.meshes[i].vertices.size();
         this->meshes_data[i].global_transform = scene.meshes[i].global_transform;
     }
 
-    this->specs.num_lights = scene.lights.size();
+    this->material_data.resize(scene.materials.size());
+    for(uint i = 0; i < scene.materials.size(); i++) {
+        this->material_data[i].albedo = scene.materials[i].albedo;
+        this->material_data[i].metallic = scene.materials[i].metallic;
+        this->material_data[i].roughness = scene.materials[i].roughness;
+        this->material_data[i].emissive = scene.materials[i].emissive;
+    }
+
+    this->specs.num_materials = scene.materials.size();
     this->specs.num_meshes = scene.meshes.size();
     this->specs.image_width = width;
     this->specs.image_height = height;
@@ -373,10 +383,11 @@ void GPUInstance::send_uniform_data_struct(uint index, int struct_size, int buff
 }
 
 void GPUInstance::send_uniform_data() {
-    send_uniform_data_struct(0, sizeof(uniform_buffers::MeshData), meshes_data.size(), meshes_data.data());
-    send_uniform_data_struct(1, sizeof(uniform_buffers::Image), 1, &image);
-    send_uniform_data_struct(2, sizeof(uniform_buffers::Specs), 1, &specs);
-    send_uniform_data_struct(3, sizeof(uniform_buffers::Camera), 1, &camera);
+    send_uniform_data_struct(0, sizeof(uniform_buffers::Specs), 1, &specs);
+    send_uniform_data_struct(1, sizeof(uniform_buffers::Camera), 1, &camera);
+    send_uniform_data_struct(2, sizeof(uniform_buffers::MaterialData), material_data.size(), material_data.data());
+    send_uniform_data_struct(3, sizeof(uniform_buffers::MeshData), meshes_data.size(), meshes_data.data());
+    send_uniform_data_struct(4, sizeof(uniform_buffers::Image), this->specs.image_height * this->specs.image_width, &image);
 
     std::vector<VkDescriptorBufferInfo> buffer_infos(UBO_COUNT);
     std::vector<VkWriteDescriptorSet> descriptor_writes(UBO_COUNT);
