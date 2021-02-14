@@ -7,7 +7,9 @@ since this is free software you can build upon this, but let's be honest you pro
 
 # todo list
 
-- create vulkan pipeline
+- create an architecture which can package the mesh coordinates and send them to GPU
+
+- decode the mesh package at the compute shader
 
 - attempt to render something
 
