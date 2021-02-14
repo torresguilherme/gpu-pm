@@ -1,17 +1,9 @@
 # gpu-pm
 [WIP] photon mapper for GPU using vulkan
 
-this is very incomplete, i do not have a deadline to finish this and i advise against trying to use this software for now.
+this is currently incomplete, i advise against trying to use this for now. also, i don't have a deadline to finish this.
 
-since this is free software you can build upon this, but let's be honest you probably don't want to. also this has no warranty so if your gpu explodes or something, sucks to be you.
-
-# todo list
-
-- create an architecture which can package the mesh coordinates and send them to GPU
-
-- decode the mesh package at the compute shader
-
-- attempt to render something
+this is free software with some restrictions. it can be used and extended freely by individuals or organizations that do not operate under capitalist principles like worker cooperatives and non-profit organizations.
 
 # requirements for building
 
@@ -21,15 +13,31 @@ since this is free software you can build upon this, but let's be honest you pro
 
 - vulkan compatible device (>= 1.1)
 
-- meson (use a reasonably recent version idfk)
+- glslc (for shader compiling. this should come with the latest LunarG vulkan SDK, just make sure it's in an executable path)
 
-- ninja (you can use other backends for meson, i like using ninja but if you do something else that's your problem)
+- meson (use a reasonably recent version)
+
+- ninja (or some other meson backend, but i'm only using ninja)
 
 - some C++ compiler
 
+# how to build
+
+- clone this repository and go to the directory;
+
+- enter the command **meson setup build**;
+
+- go to the created directory **cd build**;
+
+- enter the command **ninja**. if everything works you'll have a **demo** executable in the build directory.
+
+# usage
+
+(i'll complete this in the future when this program is actually user-ready).
+
 # contributing
 
-don't pr me. i'm not accepting requests for now and i don't know if i ever will.
+i'm not accepting contributions right now, but maybe i will in the future.
 
 have any suggestion, problem, question, or maybe you want to confess your love or something? open an issue. maybe i'll respond maybe not.
 
