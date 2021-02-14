@@ -8,6 +8,7 @@ typedef struct Material {
     float metallic;
     Texture albedo_texture;
     Texture metallic_texture;
+    glm::vec4 emissive;
 
     Material();
 } Material;

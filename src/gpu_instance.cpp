@@ -7,7 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 const uint BATCH = 64;
-const uint UBO_COUNT = 5;
+const uint UBO_COUNT = 4;
 const std::vector<const char*> VALIDATION_LAYERS = {
     "VK_LAYER_KHRONOS_validation"
 };
@@ -318,8 +318,7 @@ uint GPUInstance::get_buffer_size(uint index) {
     if (index == 0) return sizeof(uniform_buffers::MeshData) * this->meshes_data.size();
     if (index == 1) return sizeof(uniform_buffers::Image);
     if (index == 2) return sizeof(uniform_buffers::Specs);
-    if (index == 3) return sizeof(uniform_buffers::Camera);
-    else return sizeof(uniform_buffers::Light) * this->lights.size();
+    else return sizeof(uniform_buffers::Camera);
 }
 
 void GPUInstance::build_descriptor_set() {
@@ -349,30 +348,18 @@ void GPUInstance::allocate_uniform_data(const Scene& scene, uint width, uint hei
         this->meshes_data[i].global_transform = scene.meshes[i].global_transform;
     }
 
-    this->lights.resize(scene.lights.size());
-    for (uint i = 0; i < scene.lights.size(); i++) {
-        this->lights[i].position = scene.lights[i].position;
-        this->lights[i].color_ambient = scene.lights[i].color_ambient;
-        this->lights[i].color_diffuse = scene.lights[i].color_diffuse;
-        this->lights[i].color_specular = scene.lights[i].color_specular;
-        this->lights[i].attenuation_constant = scene.lights[i].attenuation_constant;
-        this->lights[i].attenuation_linear = scene.lights[i].attenuation_linear;
-        this->lights[i].attenuation_quadratic = scene.lights[i].attenuation_quadratic;
-    }
-
     this->specs.num_lights = scene.lights.size();
     this->specs.num_meshes = scene.meshes.size();
     this->specs.image_width = width;
     this->specs.image_height = height;
     this->specs.samples_per_pixel = samples_per_pixel;
 
-    // uncomment later when using the gltf camera
-    // this->camera.aspect = scene.cameras[scene.current_camera].aspect;
-    // this->camera.horizontal_fov = scene.cameras[scene.current_camera].horizontal_fov;
-    // glm::vec3 up = scene.cameras[scene.current_camera].up;
-    // glm::vec3 eye = scene.cameras[scene.current_camera].eye;
-    // glm::vec3 target = scene.cameras[scene.current_camera].target;
-    // this->camera.view_matrix = glm::lookAt(eye, target, up);
+    this->camera.aspect = scene.cameras[scene.current_camera].aspect;
+    this->camera.horizontal_fov = scene.cameras[scene.current_camera].horizontal_fov;
+    glm::vec3 up = scene.cameras[scene.current_camera].up;
+    glm::vec3 eye = scene.cameras[scene.current_camera].eye;
+    glm::vec3 target = scene.cameras[scene.current_camera].target;
+    this->camera.view_matrix = glm::lookAt(eye, target, up);
 
     this->image.data = (glm::vec4*)calloc(width * height, sizeof(glm::vec4));
 }
@@ -390,7 +377,6 @@ void GPUInstance::send_uniform_data() {
     send_uniform_data_struct(1, sizeof(uniform_buffers::Image), 1, &image);
     send_uniform_data_struct(2, sizeof(uniform_buffers::Specs), 1, &specs);
     send_uniform_data_struct(3, sizeof(uniform_buffers::Camera), 1, &camera);
-    send_uniform_data_struct(4, sizeof(uniform_buffers::Light), lights.size(), lights.data());
 
     std::vector<VkDescriptorBufferInfo> buffer_infos(UBO_COUNT);
     std::vector<VkWriteDescriptorSet> descriptor_writes(UBO_COUNT);

@@ -36,16 +36,6 @@ namespace uniform_buffers {
         float horizontal_fov;
         float aspect;
     };
-
-    struct Light {
-        glm::vec3 position;
-        glm::vec3 color_diffuse;
-        glm::vec3 color_specular;
-        glm::vec3 color_ambient;
-        float attenuation_constant;
-        float attenuation_linear;
-        float attenuation_quadratic;
-    };
 };
 
 struct GPUInstance {
@@ -69,7 +59,6 @@ struct GPUInstance {
     uniform_buffers::Image image;
     uniform_buffers::Specs specs;
     uniform_buffers::Camera camera;
-    std::vector<uniform_buffers::Light> lights;
 
     void create_instance();
     bool check_validation();

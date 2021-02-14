@@ -100,10 +100,14 @@ void Scene::read_materials(const aiScene* scene) {
     for(uint i = 0; i < scene->mNumMaterials; i++) {
         Material new_material;
 
-        aiColor4D color;
+        aiColor4D color, emissive_color;
         aiGetMaterialColor(scene->mMaterials[i], AI_MATKEY_COLOR_DIFFUSE, &color);
         new_material.albedo = glm::vec4(
             color.r, color.g, color.b, color.a
+        );
+        aiGetMaterialColor(scene->mMaterials[i], AI_MATKEY_COLOR_EMISSIVE, &emissive_color);
+        new_material.emissive = glm::vec4(
+            emissive_color.r, emissive_color.g, emissive_color.b, emissive_color.a
         );
         aiGetMaterialFloat(scene->mMaterials[i], AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, &new_material.metallic);
         aiGetMaterialFloat(scene->mMaterials[i], AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, &new_material.roughness);
