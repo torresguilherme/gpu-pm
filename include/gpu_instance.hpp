@@ -89,7 +89,7 @@ struct GPUInstance {
     void build_descriptor_set();
 
     void allocate_uniform_data(const Scene& scene, uint width, uint height, uint samples_per_pixel);
-    void send_uniform_data_struct(uint index, int struct_size, int buffer_length, void* data);
+    void send_uniform_data_struct(uint index, void* data);
     void send_uniform_data();
     void build_command_buffer();
     void execute_command_buffer(int width, int height);

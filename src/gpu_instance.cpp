@@ -31,9 +31,6 @@ GPUInstance::GPUInstance() {
     create_logical_device();
     create_pipeline();
     build_command_pool();
-    build_uniform_buffers();
-    build_descriptor_pool();
-    build_descriptor_set();
 }
 
 void GPUInstance::create_instance() {
@@ -48,7 +45,18 @@ void GPUInstance::create_instance() {
     VkInstanceCreateInfo create_info {};
     create_info.pApplicationInfo = &app_info;
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+#ifndef NDEBUG
+    if (check_validation()) {
+        create_info.enabledLayerCount = 1;
+        create_info.ppEnabledLayerNames = VALIDATION_LAYERS.data();
+    }
+    else {
+        throw std::runtime_error("Validation layers were requested but they're not available, aborting!\n");
+    }
+#else
     create_info.enabledLayerCount = 0;
+    create_info.ppEnabledLayerNames = nullptr;
+#endif
 
     auto result = vkCreateInstance(&create_info, nullptr, &this->vk_instance);
     if(result != VK_SUCCESS) {
@@ -189,7 +197,12 @@ VkShaderModule GPUInstance::create_shader_module(const std::vector<char>& code) 
 void GPUInstance::create_ubo_binding(std::vector<VkDescriptorSetLayoutBinding>& bindings, uint index) {
     bindings[index].binding = index;
     bindings[index].descriptorCount = 1;
-    bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    if (index  == UBO_COUNT-1) {
+        bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    }
+    else {
+        bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    }
     bindings[index].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     bindings[index].pImmutableSamplers = nullptr;
 }
@@ -275,7 +288,7 @@ void GPUInstance::build_uniform_buffers() {
     for (uint i = 0; i < UBO_COUNT; i++) {
         VkBufferCreateInfo buffer_info {};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_info.size = 1;
+        buffer_info.size = get_buffer_size(i);
         buffer_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -374,20 +387,20 @@ void GPUInstance::allocate_uniform_data(const Scene& scene, uint width, uint hei
     this->image.data = (glm::vec4*)calloc(width * height, sizeof(glm::vec4));
 }
 
-void GPUInstance::send_uniform_data_struct(uint index, int struct_size, int buffer_length, void* data) {
+void GPUInstance::send_uniform_data_struct(uint index, void* data) {
+    printf("%d\n", index);
     void* data_pointer;
-    vkMapMemory(this->logical_device, this->device_memory[index], 0,
-        struct_size * buffer_length, 0, &data_pointer);
-    memcpy(data_pointer, data, struct_size * buffer_length);
+    vkMapMemory(this->logical_device, this->device_memory[index], 0, get_buffer_size(index), 0, &data_pointer);
+    memcpy(data_pointer, data, get_buffer_size(index));
     vkUnmapMemory(this->logical_device, this->device_memory[index]);
 }
 
 void GPUInstance::send_uniform_data() {
-    send_uniform_data_struct(0, sizeof(uniform_buffers::Specs), 1, &specs);
-    send_uniform_data_struct(1, sizeof(uniform_buffers::Camera), 1, &camera);
-    send_uniform_data_struct(2, sizeof(uniform_buffers::MaterialData), material_data.size(), material_data.data());
-    send_uniform_data_struct(3, sizeof(uniform_buffers::MeshData), meshes_data.size(), meshes_data.data());
-    send_uniform_data_struct(4, sizeof(uniform_buffers::Image), this->specs.image_height * this->specs.image_width, &image);
+    send_uniform_data_struct(0, &specs);
+    send_uniform_data_struct(1, &camera);
+    send_uniform_data_struct(2, material_data.data());
+    send_uniform_data_struct(3, meshes_data.data());
+    send_uniform_data_struct(4, &image);
 
     std::vector<VkDescriptorBufferInfo> buffer_infos(UBO_COUNT);
     std::vector<VkWriteDescriptorSet> descriptor_writes(UBO_COUNT);
