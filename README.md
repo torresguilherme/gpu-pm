@@ -3,7 +3,7 @@
 
 this is currently incomplete, i advise against trying to use this for now. also, i don't have a deadline to finish this.
 
-this is free software with some restrictions. it can be used and extended freely by individuals or organizations like worker cooperatives and non-profit organizations.
+this is free software.
 
 # requirements for building
 
