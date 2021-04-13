@@ -1,17 +1,15 @@
 const uint MAX_MESHES = 256;
 const uint MAX_MATERIALS = 256;
-const uint MAX_VERTICES = 1048576;
-const uint MAX_INDICES = 1048576;
+const uint IMAGE_WIDTH = 1920;
+const uint IMAGE_HEIGHT = 1080;
 
-layout (set = 0, binding = 0) buffer Specs {
+layout (set = 0, binding = 0) uniform Specs {
     uint samples_per_pixel;
-    uint image_width;
-    uint image_height;
     uint num_meshes;
     uint num_materials;
 } specs;
 
-layout (set = 0, binding = 1) buffer Camera {
+layout (set = 0, binding = 1) uniform Camera {
     mat4 view_matrix;
     float horizontal_fov;
     float aspect;
@@ -19,24 +17,23 @@ layout (set = 0, binding = 1) buffer Camera {
 
 layout (set = 0, binding = 2) buffer MaterialData {
     vec4 albedo;
-    float metallic;
-    float roughness;
     vec4 emissive;
+    vec4 metallic_roughness;
 } material_data[MAX_MATERIALS];
 
-layout (set = 0, binding = 3) buffer MeshData {
-    vec3 position[MAX_VERTICES];
-    vec3 normal[MAX_VERTICES];
-    vec2 tex_coord[MAX_VERTICES];
-    vec3 tangent[MAX_VERTICES];
-    vec3 bitangent[MAX_VERTICES];
-    uint indices[MAX_INDICES];
+layout (set = 0, binding = 3) buffer Image {
+    vec4 data[IMAGE_WIDTH * IMAGE_HEIGHT];
+} image;
+
+layout (set = 0, binding = 4) buffer MeshData {
+    vec4 position[];
+    vec4 normal[];
+    vec4 tex_coord[];
+    vec4 tangent[];
+    vec4 bitangent[];
+    uint indices[];
     uint num_indices;
     uint num_vertices;
     uint material_index;
     mat4 global_transform;
-} mesh_data[MAX_MESHES];
-
-layout (set = 0, binding = 4) buffer Image {
-    vec4 data[];
-} image;
+} mesh_data[];

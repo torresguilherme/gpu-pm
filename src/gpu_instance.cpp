@@ -288,8 +288,8 @@ void GPUInstance::build_uniform_buffers() {
     for (uint i = 0; i < UBO_COUNT; i++) {
         VkBufferCreateInfo buffer_info {};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_info.size = get_buffer_size(i);
-        buffer_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        buffer_info.size = get_aligned_buffer_size(i);
+        buffer_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         if (vkCreateBuffer(this->logical_device, &buffer_info, nullptr, &this->buffers[i]) != VK_SUCCESS) {
@@ -308,6 +308,10 @@ void GPUInstance::build_uniform_buffers() {
         if (vkAllocateMemory(this->logical_device, &alloc_info, nullptr, &this->device_memory[i]) != VK_SUCCESS) {
             throw std::runtime_error("Failed to allocate vertex buffer memory!\n");
         }
+
+        if (vkBindBufferMemory(this->logical_device, this->buffers[i], this->device_memory[i], 0) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to bind contiguous buffer memory!\n");
+        }
     }
 }
 
@@ -325,6 +329,10 @@ void GPUInstance::build_descriptor_pool() {
     if (vkCreateDescriptorPool(this->logical_device, &pool_info, nullptr, &this->descriptor_pool) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create descriptor pool!\n");
     }
+}
+
+uint GPUInstance::get_aligned_buffer_size(uint index) {
+    return (get_buffer_size(index) / 0x10 + 1) * 0x10;
 }
 
 uint GPUInstance::get_buffer_size(uint index) {
@@ -388,7 +396,6 @@ void GPUInstance::allocate_uniform_data(const Scene& scene, uint width, uint hei
 }
 
 void GPUInstance::send_uniform_data_struct(uint index, void* data) {
-    printf("%d\n", index);
     void* data_pointer;
     vkMapMemory(this->logical_device, this->device_memory[index], 0, get_buffer_size(index), 0, &data_pointer);
     memcpy(data_pointer, data, get_buffer_size(index));
@@ -414,6 +421,9 @@ void GPUInstance::send_uniform_data() {
         descriptor_writes[i].dstBinding = i;
         descriptor_writes[i].dstArrayElement = 0;
         descriptor_writes[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        if (i == UBO_COUNT-1) {
+            descriptor_writes[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        }
         descriptor_writes[i].descriptorCount = 1;
         descriptor_writes[i].pBufferInfo = &buffer_infos[i];
         descriptor_writes[i].pNext = nullptr;

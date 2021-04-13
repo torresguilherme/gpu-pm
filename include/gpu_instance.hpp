@@ -85,6 +85,7 @@ struct GPUInstance {
     uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties);
     void build_uniform_buffers();
     void build_descriptor_pool();
+    uint get_aligned_buffer_size(uint index);
     uint get_buffer_size(uint index);
     void build_descriptor_set();
 

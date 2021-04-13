@@ -3,6 +3,7 @@ project('gpu-pm', 'cpp', default_options : 'std=c++11 -g3')
 incdir = 'include/'
 pfx = 'src/'
 shader_pfx = 'shaders/'
+third_party = 'third_party/'
 
 sources = [
     pfx + 'main.cpp',
@@ -38,7 +39,7 @@ foreach shader : shaders
 endforeach
 
 executable('demo', sources,
-include_directories : incdir,
+include_directories : [incdir, third_party],
 dependencies : [
     assimp,
     glm,
