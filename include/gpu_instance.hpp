@@ -51,6 +51,7 @@ struct GPUInstance {
     VkInstance vk_instance;
     VkPhysicalDevice physical_device;
     VkDevice logical_device;
+    VkQueue queue;
     VkShaderModule compute_module;
     VkDescriptorSetLayout descriptor_set_layout;
     VkPipelineLayout layout;
@@ -68,6 +69,7 @@ struct GPUInstance {
     uniform_buffers::Image image;
     uniform_buffers::Specs specs;
     uniform_buffers::Camera camera;
+    int image_size;
 
     void create_instance();
     bool check_validation();
@@ -82,8 +84,9 @@ struct GPUInstance {
     void create_pipeline_stages();
     void create_pipeline();
     void build_command_pool();
+
     uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties);
-    void build_uniform_buffers();
+    void build_uniform_buffers(int width, int height);
     void build_descriptor_pool();
     uint get_aligned_buffer_size(uint index);
     uint get_buffer_size(uint index);
@@ -91,6 +94,7 @@ struct GPUInstance {
 
     void allocate_uniform_data(const Scene& scene, uint width, uint height, uint samples_per_pixel);
     void send_uniform_data_struct(uint index, void* data);
+    void* get_uniform_data_struct(uint index);
     void send_uniform_data();
     void build_command_buffer();
     void execute_command_buffer(int width, int height);

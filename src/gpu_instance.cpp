@@ -6,7 +6,7 @@
 #include <fstream>
 #include <glm/gtc/matrix_transform.hpp>
 
-const uint BATCH = 64;
+const uint BATCH = 32;
 const uint UBO_COUNT = 5;
 const std::vector<const char*> VALIDATION_LAYERS = {
     "VK_LAYER_KHRONOS_validation"
@@ -176,6 +176,8 @@ void GPUInstance::create_logical_device() {
         throw std::runtime_error("Failed at creating logical device!\n");
     }
 
+    vkGetDeviceQueue(this->logical_device, indices.graphics_family, 0, &this->queue);
+
     printf("Device created with success!\n");
 }
 
@@ -281,14 +283,14 @@ uint32_t GPUInstance::find_memory_type(uint32_t type_filter, VkMemoryPropertyFla
     throw std::runtime_error("failed to find suitable memory type!");
 }
 
-void GPUInstance::build_uniform_buffers() {
+void GPUInstance::build_uniform_buffers(int width, int height) {
     this->buffers.resize(UBO_COUNT);
     this->device_memory.resize(UBO_COUNT);
 
     for (uint i = 0; i < UBO_COUNT; i++) {
         VkBufferCreateInfo buffer_info {};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_info.size = get_aligned_buffer_size(i);
+        buffer_info.size = get_buffer_size(i);
         buffer_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -339,8 +341,8 @@ uint GPUInstance::get_buffer_size(uint index) {
     if (index == 0) return sizeof(uniform_buffers::Specs);
     if (index == 1) return sizeof(uniform_buffers::Camera);
     if (index == 2) return sizeof(uniform_buffers::MaterialData) * this->material_data.size();
-    if (index == 3) return sizeof(uniform_buffers::MeshData) * this->meshes_data.size();
-    else return sizeof(uniform_buffers::Image);
+    if (index == 3) return this->image_size;
+    else return sizeof(uniform_buffers::MeshData) * this->meshes_data.size();
 }
 
 void GPUInstance::build_descriptor_set() {
@@ -393,6 +395,7 @@ void GPUInstance::allocate_uniform_data(const Scene& scene, uint width, uint hei
     this->camera.view_matrix = glm::lookAt(eye, target, up);
 
     this->image.data = (glm::vec4*)calloc(width * height, sizeof(glm::vec4));
+    this->image_size = width * height * sizeof(glm::vec4);
 }
 
 void GPUInstance::send_uniform_data_struct(uint index, void* data) {
@@ -402,36 +405,37 @@ void GPUInstance::send_uniform_data_struct(uint index, void* data) {
     vkUnmapMemory(this->logical_device, this->device_memory[index]);
 }
 
+
+void* GPUInstance::get_uniform_data_struct(uint index) {
+    void* data_pointer;
+    vkMapMemory(this->logical_device, this->device_memory[index], 0, get_buffer_size(index), 0, &data_pointer);
+    return data_pointer;
+}
+
 void GPUInstance::send_uniform_data() {
     send_uniform_data_struct(0, &specs);
     send_uniform_data_struct(1, &camera);
     send_uniform_data_struct(2, material_data.data());
-    send_uniform_data_struct(3, meshes_data.data());
-    send_uniform_data_struct(4, &image);
+    send_uniform_data_struct(4, meshes_data.data());
 
-    std::vector<VkDescriptorBufferInfo> buffer_infos(UBO_COUNT);
-    std::vector<VkWriteDescriptorSet> descriptor_writes(UBO_COUNT);
-    for (uint i = 0; i < UBO_COUNT; i++) {
-        buffer_infos[i].buffer = buffers[i];
-        buffer_infos[i].offset = 0;
-        buffer_infos[i].range = get_buffer_size(i);
+    VkDescriptorBufferInfo buffer_info;
+    VkWriteDescriptorSet descriptor_write;
+    buffer_info.buffer = this->buffers[3];
+    buffer_info.offset = 0;
+    buffer_info.range = get_buffer_size(3);
 
-        descriptor_writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptor_writes[i].dstSet = this->descriptor_sets[0];
-        descriptor_writes[i].dstBinding = i;
-        descriptor_writes[i].dstArrayElement = 0;
-        descriptor_writes[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        if (i >= UBO_COUNT-2) {
-            descriptor_writes[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        }
-        descriptor_writes[i].descriptorCount = 1;
-        descriptor_writes[i].pBufferInfo = &buffer_infos[i];
-        descriptor_writes[i].pNext = nullptr;
-        descriptor_writes[i].pImageInfo = nullptr;
-        descriptor_writes[i].pTexelBufferView = nullptr;
-    }
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstSet = this->descriptor_sets[0];
+    descriptor_write.dstBinding = 3;
+    descriptor_write.dstArrayElement = 0;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.pBufferInfo = &buffer_info;
+    descriptor_write.pNext = nullptr;
+    descriptor_write.pImageInfo = nullptr;
+    descriptor_write.pTexelBufferView = nullptr;
 
-    vkUpdateDescriptorSets(this->logical_device, UBO_COUNT, descriptor_writes.data(), 0, (VkCopyDescriptorSet*) this->descriptor_sets.data());
+    vkUpdateDescriptorSets(this->logical_device, 1, &descriptor_write, 0, nullptr);
 }
 
 void GPUInstance::build_command_buffer() {
@@ -460,11 +464,28 @@ void GPUInstance::build_command_buffer() {
 }
 
 void GPUInstance::execute_command_buffer(int width, int height) {
-    vkCmdDispatch(this->command_buffer, width, height, 1);
+    vkCmdDispatch(this->command_buffer, width / BATCH, height / BATCH, 1);
 }
 
 void GPUInstance::end_command_buffer() {
     vkEndCommandBuffer(this->command_buffer);
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1; // submit a single command buffer
+    submitInfo.pCommandBuffers = &this->command_buffer; // the command buffer to submit.
+
+    VkFence fence;
+    VkFenceCreateInfo fenceCreateInfo = {};
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.flags = 0;
+    if (vkCreateFence(this->logical_device, &fenceCreateInfo, NULL, &fence) != VK_SUCCESS) {
+        throw std::runtime_error("failed to begin recording command buffer!\n");
+    }
+    vkQueueSubmit(this->queue, 1, &submitInfo, fence);
+    vkWaitForFences(this->logical_device, 1, &fence, VK_TRUE, 100000000000);
+    vkDestroyFence(this->logical_device, fence, nullptr);
+
+    this->image.data = (glm::vec4*) get_uniform_data_struct(3);
 }
 
 GPUInstance::~GPUInstance() {
@@ -472,22 +493,24 @@ GPUInstance::~GPUInstance() {
 }
 
 void GPUInstance::destroy_image_data() {
-    free(&this->image);
+    vkUnmapMemory(this->logical_device, this->device_memory[3]);
+    //free(this->image.data);
 }
 
 void GPUInstance::cleanup() {
     printf("Destroying GPU instance...\n");
+    destroy_image_data();
     vkDestroyDescriptorPool(this->logical_device, this->descriptor_pool, nullptr);
     vkDestroyCommandPool(this->logical_device, this->command_pool, nullptr);
     vkDestroyDescriptorSetLayout(this->logical_device, this->descriptor_set_layout, nullptr);
     vkDestroyPipelineLayout(this->logical_device, this->layout, nullptr);
     vkDestroyShaderModule(this->logical_device, this->compute_module, nullptr);
     vkDestroyPipeline(this->logical_device, this->pipeline, nullptr);
-    for (uint i = 0; i < this->buffers.size(); i++) {
-        vkDestroyBuffer(this->logical_device, this->buffers[i], nullptr);
-    }
     for (uint i = 0; i < this->device_memory.size(); i++) {
         vkFreeMemory(this->logical_device, this->device_memory[i], nullptr);
+    }
+    for (uint i = 0; i < this->buffers.size(); i++) {
+        vkDestroyBuffer(this->logical_device, this->buffers[i], nullptr);
     }
     vkDestroyDevice(this->logical_device, nullptr);
     vkDestroyInstance(this->vk_instance, nullptr);

@@ -2,10 +2,10 @@
 #include "buffers.comp"
 #include "ray.comp"
 
-const uint BATCH = 64;
-layout (local_size_x = BATCH, local_size_y = 1, local_size_z = 1) in;
+const uint BATCH = 32;
+layout (local_size_x = BATCH, local_size_y = BATCH, local_size_z = 1) in;
 
 void main() {
-    uint idx = gl_GlobalInvocationID.x;
+    uint idx = gl_LocalInvocationIndex;
     image.data[idx] = vec4(1.0, 0.0, 1.0, 1.0);
 }
