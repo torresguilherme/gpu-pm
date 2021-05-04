@@ -197,7 +197,7 @@ VkShaderModule GPUInstance::create_shader_module(const std::vector<char>& code) 
 void GPUInstance::create_ubo_binding(std::vector<VkDescriptorSetLayoutBinding>& bindings, uint index) {
     bindings[index].binding = index;
     bindings[index].descriptorCount = 1;
-    if (index  == UBO_COUNT-1) {
+    if (index >= UBO_COUNT-2) {
         bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     }
     else {
@@ -317,7 +317,7 @@ void GPUInstance::build_uniform_buffers() {
 
 void GPUInstance::build_descriptor_pool() {
     VkDescriptorPoolSize pool_size {};
-    pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     pool_size.descriptorCount = UBO_COUNT;
 
     VkDescriptorPoolCreateInfo pool_info {};
@@ -421,7 +421,7 @@ void GPUInstance::send_uniform_data() {
         descriptor_writes[i].dstBinding = i;
         descriptor_writes[i].dstArrayElement = 0;
         descriptor_writes[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        if (i == UBO_COUNT-1) {
+        if (i >= UBO_COUNT-2) {
             descriptor_writes[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         }
         descriptor_writes[i].descriptorCount = 1;
@@ -431,7 +431,7 @@ void GPUInstance::send_uniform_data() {
         descriptor_writes[i].pTexelBufferView = nullptr;
     }
 
-    vkUpdateDescriptorSets(this->logical_device, UBO_COUNT, descriptor_writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(this->logical_device, UBO_COUNT, descriptor_writes.data(), 0, (VkCopyDescriptorSet*) this->descriptor_sets.data());
 }
 
 void GPUInstance::build_command_buffer() {
@@ -455,7 +455,7 @@ void GPUInstance::build_command_buffer() {
     }
 
     vkCmdBindPipeline(this->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, this->pipeline);
-    vkCmdBindDescriptorSets(this->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, this->layout, 0, UBO_COUNT,
+    vkCmdBindDescriptorSets(this->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, this->layout, 0, 1,
         this->descriptor_sets.data(), 0, nullptr);
 }
 
@@ -477,13 +477,18 @@ void GPUInstance::destroy_image_data() {
 
 void GPUInstance::cleanup() {
     printf("Destroying GPU instance...\n");
-    this->destroy_image_data();
     vkDestroyDescriptorPool(this->logical_device, this->descriptor_pool, nullptr);
     vkDestroyCommandPool(this->logical_device, this->command_pool, nullptr);
     vkDestroyDescriptorSetLayout(this->logical_device, this->descriptor_set_layout, nullptr);
     vkDestroyPipelineLayout(this->logical_device, this->layout, nullptr);
     vkDestroyShaderModule(this->logical_device, this->compute_module, nullptr);
     vkDestroyPipeline(this->logical_device, this->pipeline, nullptr);
+    for (uint i = 0; i < this->buffers.size(); i++) {
+        vkDestroyBuffer(this->logical_device, this->buffers[i], nullptr);
+    }
+    for (uint i = 0; i < this->device_memory.size(); i++) {
+        vkFreeMemory(this->logical_device, this->device_memory[i], nullptr);
+    }
     vkDestroyDevice(this->logical_device, nullptr);
     vkDestroyInstance(this->vk_instance, nullptr);
 }

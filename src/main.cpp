@@ -12,7 +12,9 @@ int main(int argc, char** argv) {
     Renderer renderer = Renderer();
     printf("Initializing scene...\n");
     Scene scene = Scene(argv[1]);
-    printf("Rendering...");
+    printf("Rendering...\n");
     renderer.render(scene);
+    printf("Saving image...\n");
+    renderer.save_image();
     return 0;
 }
