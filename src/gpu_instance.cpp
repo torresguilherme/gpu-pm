@@ -8,6 +8,7 @@
 
 const uint BATCH = 32;
 const uint UBO_COUNT = 5;
+const uint IMAGE_BINDING = 3;
 const std::vector<const char*> VALIDATION_LAYERS = {
     "VK_LAYER_KHRONOS_validation"
 };
@@ -199,7 +200,7 @@ VkShaderModule GPUInstance::create_shader_module(const std::vector<char>& code) 
 void GPUInstance::create_ubo_binding(std::vector<VkDescriptorSetLayoutBinding>& bindings, uint index) {
     bindings[index].binding = index;
     bindings[index].descriptorCount = 1;
-    if (index >= UBO_COUNT-2) {
+    if (index >= IMAGE_BINDING) {
         bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     }
     else {
@@ -341,8 +342,8 @@ uint GPUInstance::get_buffer_size(uint index) {
     if (index == 0) return sizeof(uniform_buffers::Specs);
     if (index == 1) return sizeof(uniform_buffers::Camera);
     if (index == 2) return sizeof(uniform_buffers::MaterialData) * this->material_data.size();
-    if (index == 3) return this->image_size;
-    else return sizeof(uniform_buffers::MeshData) * this->meshes_data.size();
+    if (index == IMAGE_BINDING) return this->image_size;
+    else return sizeof(uniform_buffers::Vertex) * this->mesh_data.num_vertices + 2 * sizeof(uint);
 }
 
 void GPUInstance::build_descriptor_set() {
@@ -359,26 +360,33 @@ void GPUInstance::build_descriptor_set() {
 }
 
 void GPUInstance::allocate_uniform_data(const Scene& scene, uint width, uint height, uint samples_per_pixel) {
-    this->meshes_data.resize(scene.meshes.size());
+    this->mesh_data.vertices = (uniform_buffers::Vertex*) malloc(sizeof(uniform_buffers::Vertex) * scene.total_scene_vertices);
+    this->mesh_data.num_vertices = scene.total_scene_vertices;
+    uint global_index = 0;
     for (uint i = 0; i < scene.meshes.size(); i++) {
-        this->meshes_data[i].position = scene.meshes[i].vertices.data();
-        this->meshes_data[i].normal = scene.meshes[i].normals.data();
-        this->meshes_data[i].tex_coord = scene.meshes[i].tex_coords.data();
-        this->meshes_data[i].tangent = scene.meshes[i].tangents.data();
-        this->meshes_data[i].bitangent = scene.meshes[i].bitangents.data();
-        this->meshes_data[i].indices = scene.meshes[i].indices.data();
-        this->meshes_data[i].material_index = scene.meshes[i].material;
-        this->meshes_data[i].num_indices = scene.meshes[i].indices.size();
-        this->meshes_data[i].num_vertices = scene.meshes[i].vertices.size();
-        this->meshes_data[i].global_transform = scene.meshes[i].global_transform;
+        for (uint j = 0; j < scene.meshes[i].vertices.size(); j++) {
+            this->mesh_data.vertices[global_index].position = scene.meshes[i].vertices[j];
+            this->mesh_data.vertices[global_index].normal = scene.meshes[i].normals[j];
+            this->mesh_data.vertices[global_index].tangent = scene.meshes[i].tangents[j];
+            this->mesh_data.vertices[global_index].bitangent = scene.meshes[i].bitangents[j];
+            this->mesh_data.vertices[global_index].tex_coord = scene.meshes[i].tex_coords[j];
+            this->mesh_data.vertices[global_index].indices = glm::ivec4(
+                i,
+                scene.meshes[i].material,
+                0, 0
+            );
+        }
     }
 
     this->material_data.resize(scene.materials.size());
     for(uint i = 0; i < scene.materials.size(); i++) {
         this->material_data[i].albedo = scene.materials[i].albedo;
-        this->material_data[i].metallic = scene.materials[i].metallic;
-        this->material_data[i].roughness = scene.materials[i].roughness;
         this->material_data[i].emissive = scene.materials[i].emissive;
+        this->material_data[i].metallic_roughness = glm::vec4(
+            scene.materials[i].metallic,
+            scene.materials[i].roughness,
+            0.0, 0.0
+        );
     }
 
     this->specs.num_materials = scene.materials.size();
@@ -394,8 +402,8 @@ void GPUInstance::allocate_uniform_data(const Scene& scene, uint width, uint hei
     glm::vec3 target = scene.cameras[scene.current_camera].target;
     this->camera.view_matrix = glm::lookAt(eye, target, up);
 
-    this->image.data = (glm::vec4*)calloc(width * height, sizeof(glm::vec4));
-    this->image_size = width * height * sizeof(glm::vec4);
+    // this->image.data = (glm::vec4*)calloc(width * height, sizeof(glm::vec4));
+    this->image_size = width * height * sizeof(float) * 4;
 }
 
 void GPUInstance::send_uniform_data_struct(uint index, void* data) {
@@ -416,17 +424,17 @@ void GPUInstance::send_uniform_data() {
     send_uniform_data_struct(0, &specs);
     send_uniform_data_struct(1, &camera);
     send_uniform_data_struct(2, material_data.data());
-    send_uniform_data_struct(4, meshes_data.data());
+    send_uniform_data_struct(4, &mesh_data);
 
     VkDescriptorBufferInfo buffer_info;
     VkWriteDescriptorSet descriptor_write;
-    buffer_info.buffer = this->buffers[3];
+    buffer_info.buffer = this->buffers[IMAGE_BINDING];
     buffer_info.offset = 0;
-    buffer_info.range = get_buffer_size(3);
+    buffer_info.range = get_buffer_size(IMAGE_BINDING);
 
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptor_write.dstSet = this->descriptor_sets[0];
-    descriptor_write.dstBinding = 3;
+    descriptor_write.dstBinding = IMAGE_BINDING;
     descriptor_write.dstArrayElement = 0;
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     descriptor_write.descriptorCount = 1;
@@ -479,13 +487,13 @@ void GPUInstance::end_command_buffer() {
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.flags = 0;
     if (vkCreateFence(this->logical_device, &fenceCreateInfo, NULL, &fence) != VK_SUCCESS) {
-        throw std::runtime_error("failed to begin recording command buffer!\n");
+        throw std::runtime_error("failed to create fence!\n");
     }
     vkQueueSubmit(this->queue, 1, &submitInfo, fence);
     vkWaitForFences(this->logical_device, 1, &fence, VK_TRUE, 100000000000);
     vkDestroyFence(this->logical_device, fence, nullptr);
 
-    this->image.data = (glm::vec4*) get_uniform_data_struct(3);
+    this->image.data = (float*) get_uniform_data_struct(IMAGE_BINDING);
 }
 
 GPUInstance::~GPUInstance() {
@@ -493,8 +501,8 @@ GPUInstance::~GPUInstance() {
 }
 
 void GPUInstance::destroy_image_data() {
-    vkUnmapMemory(this->logical_device, this->device_memory[3]);
-    //free(this->image.data);
+    vkUnmapMemory(this->logical_device, this->device_memory[IMAGE_BINDING]);
+    // free(this->image.data);
 }
 
 void GPUInstance::cleanup() {

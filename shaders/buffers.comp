@@ -1,10 +1,9 @@
-const uint MAX_MESHES = 256;
 const uint MAX_MATERIALS = 256;
-const uint IMAGE_WIDTH = 1920;
-const uint IMAGE_HEIGHT = 1080;
 
 layout (set = 0, binding = 0) uniform Specs {
     uint samples_per_pixel;
+    uint image_width;
+    uint image_height;
     uint num_meshes;
     uint num_materials;
 } specs;
@@ -22,18 +21,21 @@ layout (set = 0, binding = 2) uniform MaterialData {
 } material_data[MAX_MATERIALS];
 
 layout (set = 0, binding = 3) buffer Image {
-    vec4 data[IMAGE_WIDTH * IMAGE_HEIGHT];
+    vec4 data[];
 } image;
 
+struct Vertex {
+    vec4 position;
+    vec4 normal;
+    vec4 tex_coord;
+    vec4 tangent;
+    vec4 bitangent;
+    ivec4 indices;
+    mat4 global_transform;
+};
+
 layout (set = 0, binding = 4) buffer MeshData {
-    vec4 position[];
-    vec4 normal[];
-    vec4 tex_coord[];
-    vec4 tangent[];
-    vec4 bitangent[];
-    uint indices[];
     uint num_indices;
     uint num_vertices;
-    uint material_index;
-    mat4 global_transform;
-} mesh_data[];
+    Vertex vertices[];
+} mesh_data;

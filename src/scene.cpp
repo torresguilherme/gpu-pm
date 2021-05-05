@@ -28,36 +28,44 @@ Scene::Scene(const char* file_name) {
 }
 
 void Scene::read_meshes(const aiScene* scene) {
+    total_scene_vertices = 0;
     for(uint i = 0; i < scene->mNumMeshes; i++) {
+        total_scene_vertices += scene->mMeshes[i]->mNumVertices;
         Mesh newmesh;
         for (uint j = 0; j < scene->mMeshes[i]->mVertices->Length(); j++) {
             newmesh.vertices.push_back({
                 scene->mMeshes[i]->mVertices[j].x,
                 scene->mMeshes[i]->mVertices[j].y,
-                scene->mMeshes[i]->mVertices[j].z   
+                scene->mMeshes[i]->mVertices[j].z,
+                0.0  
             });
 
             newmesh.normals.push_back({
                 scene->mMeshes[i]->mNormals[j].x,
                 scene->mMeshes[i]->mNormals[j].y,
-                scene->mMeshes[i]->mNormals[j].z
+                scene->mMeshes[i]->mNormals[j].z,
+                0.0
             });
 
-            newmesh.tex_coords.push_back(glm::vec2(
+            newmesh.tex_coords.push_back(glm::vec4(
                 scene->mMeshes[i]->mTextureCoords[0][j].x,
-                scene->mMeshes[i]->mTextureCoords[0][j].y
+                scene->mMeshes[i]->mTextureCoords[0][j].y,
+                scene->mMeshes[i]->mTextureCoords[0][j].z,
+                0.0
             ));
 
-            newmesh.tangents.push_back(glm::vec3(
+            newmesh.tangents.push_back(glm::vec4(
                 scene->mMeshes[i]->mTangents[j].x,
                 scene->mMeshes[i]->mTangents[j].y,
-                scene->mMeshes[i]->mTangents[j].z
+                scene->mMeshes[i]->mTangents[j].z,
+                0.0
             ));
 
-            newmesh.bitangents.push_back(glm::vec3(
+            newmesh.bitangents.push_back(glm::vec4(
                 scene->mMeshes[i]->mBitangents[j].x,
                 scene->mMeshes[i]->mBitangents[j].y,
-                scene->mMeshes[i]->mBitangents[j].z
+                scene->mMeshes[i]->mBitangents[j].z,
+                0.0
             ));
         }
 

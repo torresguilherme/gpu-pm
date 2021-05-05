@@ -3,7 +3,6 @@
 #include <stb_image_write.h>
 
 Renderer::Renderer() {
-    image = std::vector<float>(WIDTH * HEIGHT);
 }
 
 void Renderer::render(const Scene& scene) {

@@ -5,12 +5,12 @@
 
 typedef struct Mesh {
     glm::mat4x4 global_transform;
-    std::vector<glm::vec3> vertices;
+    std::vector<glm::vec4> vertices;
     std::vector<uint> indices;
-    std::vector<glm::vec3> normals;
-    std::vector<glm::vec2> tex_coords;
-    std::vector<glm::vec3> tangents;
-    std::vector<glm::vec3> bitangents;
+    std::vector<glm::vec4> normals;
+    std::vector<glm::vec4> tex_coords;
+    std::vector<glm::vec4> tangents;
+    std::vector<glm::vec4> bitangents;
     int material;
 
     Mesh();

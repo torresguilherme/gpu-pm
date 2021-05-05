@@ -13,6 +13,7 @@ typedef struct Scene {
     std::vector<Light> lights;
     std::vector<Material> materials;
     uint current_camera;
+    uint total_scene_vertices;
 
     Scene(const char* file_name);
     void read_meshes(const aiScene* scene);

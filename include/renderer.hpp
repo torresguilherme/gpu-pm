@@ -8,7 +8,6 @@ const uint SAMPLES_PER_PIXEL = 400;
 
 struct Renderer {
     GPUInstance instance;
-    std::vector<float> image;
 
     void render(const Scene& scene);
     void save_image();

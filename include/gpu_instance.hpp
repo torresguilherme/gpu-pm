@@ -23,26 +23,27 @@ namespace uniform_buffers {
 
     struct MaterialData {
         glm::vec4 albedo;
-        float metallic;
-        float roughness;
         glm::vec4 emissive;
+        glm::vec4 metallic_roughness;
     };
 
-    struct MeshData {
-        const glm::vec3* position;
-        const glm::vec3* normal;
-        const glm::vec2* tex_coord;
-        const glm::vec3* tangent;
-        const glm::vec3* bitangent;
-        const uint* indices;
-        uint material_index;
-        uint num_indices;
-        uint num_vertices;
+    struct Vertex {
+        glm::vec4 position;
+        glm::vec4 normal;
+        glm::vec4 tex_coord;
+        glm::vec4 tangent;
+        glm::vec4 bitangent;
+        glm::ivec4 indices;
         glm::mat4 global_transform;
     };
 
+    struct MeshData {
+        uint num_vertices;
+        Vertex* vertices;
+    };
+
     struct Image {
-        glm::vec4* data;
+        float* data;
     };
 };
 
@@ -64,7 +65,7 @@ struct GPUInstance {
     std::vector<VkDeviceMemory> device_memory;
 
     // buffers
-    std::vector<uniform_buffers::MeshData> meshes_data;
+    uniform_buffers::MeshData mesh_data;
     std::vector<uniform_buffers::MaterialData> material_data;
     uniform_buffers::Image image;
     uniform_buffers::Specs specs;
